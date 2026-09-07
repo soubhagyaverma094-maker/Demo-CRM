@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Today's Briefings</title>
+<style>
+  :root {
+    --ink: #1B2430;
+    --ink-2: #2A3440;
+    --paper: #F6F3EC;
+    --line: #E4DFD3;
+    --slate: #5B6B79;
+    --slate-lt: #9AA6AF;
+    --amber: #E8A33D;
+    --rust: #B4530F;
+    --rust-bg: #FCEFE1;
+    --sage: #3F6B4C;
+    --sage-bg: #E9F2EA;
+    --neutral-bg: #F1EEE7;
+    --neutral-txt: #6B6459;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .serif { font-family: Georgia, 'Times New Roman', serif; }
+
+  .header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 22px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header .date { font-size: 12px; color: var(--slate-lt); margin-bottom: 2px; }
+  .header h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px;
+    border: 1px solid #3A4552; background: transparent;
+    color: var(--paper); cursor: pointer; font-size: 13px;
+    font-family: inherit;
+  }
+  .btn:disabled { color: #6C7681; cursor: not-allowed; }
+  .icon-btn { padding: 8px 10px; }
+  .icon-btn.active { background: var(--ink-2); }
+
+  .settings-bar {
+    background: var(--ink); border-top: 1px solid var(--ink-2);
+    padding: 16px 32px; display: none; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .settings-bar.open { display: flex; }
+  .settings-bar label { font-size: 13px; color: var(--slate-lt); }
+  .settings-bar input {
+    flex: 1; min-width: 260px; padding: 8px 10px; border-radius: 6px;
+    border: 1px solid #3A4552; background: #0F151C; color: var(--paper); font-size: 13px;
+  }
+  .settings-bar button.connect {
+    padding: 8px 14px; border-radius: 6px; border: none;
+    background: var(--rust); color: var(--rust-bg); font-size: 13px; cursor: pointer;
+  }
+
+  .banner { display: flex; align-items: center; gap: 8px; padding: 10px 32px; font-size: 13px; }
+  .banner.error { background: var(--rust-bg); color: var(--rust); }
+  .banner.info { background: var(--sage-bg); color: var(--sage); }
+  .banner { display: none; }
+  .banner.show { display: flex; }
+
+  .body-wrap { display: flex; max-width: 1100px; margin: 0 auto; }
+  .rail {
+    width: 300px; flex-shrink: 0; border-right: 1px solid var(--line);
+    padding: 24px 20px;
+  }
+  .rail-title {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 16px;
+    font-size: 12px; font-weight: 600; color: var(--slate);
+  }
+  .meeting-item {
+    display: block; width: 100%; text-align: left; padding: 12px 14px;
+    border-radius: 8px; border: 1px solid var(--line); background: #fff;
+    cursor: pointer; margin-bottom: 8px; font-family: inherit;
+    border-left: 3px solid var(--line);
+  }
+  .meeting-item.priority { border-left: 3px solid var(--rust); }
+  .meeting-item.selected { border-color: var(--ink); background: var(--ink); border-left: 3px solid var(--amber); }
+
+  .day-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .day-tab {
+    flex: 1; padding: 6px 0; text-align: center; font-size: 12px; font-weight: 600;
+    border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--slate);
+    cursor: pointer; font-family: inherit;
+  }
+  .day-tab.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  .copy-btn {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: 12px;
+    font-size: 13px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line);
+    background: #fff; color: var(--ink); cursor: pointer; font-family: inherit;
+  }
+  .copy-btn.copied { background: var(--sage-bg); color: var(--sage); border-color: var(--sage); }
+  .meeting-item .time-row {
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    color: var(--rust); margin-bottom: 4px; font-weight: 600;
+  }
+  .meeting-item.selected .time-row { color: var(--amber); }
+  .next-tag {
+    margin-left: 4px; font-size: 10px; font-weight: 700; color: #FCEFE1;
+    background: var(--amber); padding: 1px 6px; border-radius: 999px;
+  }
+  .meeting-item.selected .next-tag { color: var(--ink); }
+  .meeting-item .m-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+  .meeting-item.selected .m-title { color: var(--paper); }
+  .meeting-item .m-sub { font-size: 12px; color: var(--slate); }
+  .meeting-item.selected .m-sub { color: var(--slate-lt); }
+
+  .detail { flex: 1; padding: 28px 32px; }
+  .detail .m-time { font-size: 13px; color: var(--slate); margin-bottom: 4px; }
+  .detail h2 { font-size: 24px; font-weight: 600; margin: 0 0 8px 0; }
+  .detail .join {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+    color: var(--rust); text-decoration: none;
+  }
+  .attendee-count {
+    font-size: 12px; font-weight: 600; color: var(--slate); margin: 20px 0 10px 0; letter-spacing: 0.2px;
+  }
+
+  .card { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; margin-bottom: 12px; }
+  .card-head {
+    width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+    background: transparent; border: none; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  .card-head .name { font-size: 16px; color: var(--ink); font-weight: 600; }
+  .card-head .email { font-size: 13px; color: var(--slate); }
+  .status-pill { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .status-pending { color: var(--rust); background: var(--rust-bg); }
+  .status-recent { color: var(--sage); background: var(--sage-bg); }
+  .status-none { color: var(--neutral-txt); background: var(--neutral-bg); }
+  .chevron { margin-left: auto; color: var(--slate); }
+
+  .card-body { padding: 0 16px 16px 64px; display: none; flex-direction: column; gap: 14px; }
+  .card-body.open { display: flex; }
+  .card-body .label { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--slate); }
+  .card-body p { font-size: 14px; line-height: 1.55; color: #2C332F; margin: 0; }
+  .card-body a { font-size: 13px; color: var(--rust); text-decoration: none; }
+
+  .empty { padding: 40px; text-align: center; color: var(--slate); }
+
+  .rail { animation: none; }
+  #meetingList { min-height: 40px; }
+  .detail { min-height: 300px; }
+
+  @media (max-width: 700px) {
+    .body-wrap { flex-direction: column; }
+    .rail { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="date" id="dateLabel"></div>
+    <h1 class="serif">Today's briefings</h1>
+  </div>
+  <div class="header-actions">
+    <span id="syncedLabel" style="font-size:12px;color:var(--slate-lt);"></span>
+    <button class="btn" id="refreshBtn" disabled>⟳ Refresh</button>
+    <button class="btn icon-btn" id="settingsToggle">⚙</button>
+  </div>
+</div>
+
+<div class="settings-bar" id="settingsBar">
+  <label>n8n webhook URL</label>
+  <input type="text" id="webhookInput" placeholder="https://your-n8n-instance.com/webhook/meeting-briefing" />
+  <button class="connect" id="connectBtn">Connect</button>
+</div>
+
+<div class="banner error" id="errorBanner"></div>
+<div class="banner info show" id="sampleBanner">✓ Showing sample data — add your n8n webhook URL in settings to pull live briefings.</div>
+
+<div class="body-wrap">
+  <div class="rail">
+    <div class="day-tabs">
+      <button class="day-tab active" id="tabToday" onclick="switchDay('today')">Today</button>
+      <button class="day-tab" id="tabTomorrow" onclick="switchDay('tomorrow')">Tomorrow</button>
+    </div>
+    <div class="rail-title"><span id="meetingCountLabel"></span></div>
+    <div id="meetingList"></div>
+  </div>
+  <div class="detail" id="detailPane"></div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// SAMPLE DATA — swap for real n8n webhook output once it's live.
+// Expected shape from the webhook (GET, returns a JSON array):
+// [{ id, time, endTime, title, meetingUrl, status: "upcoming"|"later",
+//    attendees: [{ name, email, linkedinUrl, emailRecap, linkedinRecap, emailStatus }] }]
+// ---------------------------------------------------------------------
+let meetingsByDay = {
+  today: [
+    {
+      id: "m1", time: "10:00 AM", endTime: "10:30 AM",
+      title: "Pricing walkthrough — Ferro Steelworks",
+      meetingUrl: "https://meet.google.com/abc-defg-hij", status: "upcoming",
+      attendees: [
+        {
+          name: "Ramesh Kulkarni", email: "ramesh.kulkarni@ferrosteel.example",
+          linkedinUrl: "https://linkedin.com/in/rameshkulkarni",
+          emailRecap: "Last emailed 6 days ago. Ramesh asked for a discount on the annual plan and wanted clarity on the onboarding timeline. You promised a revised quote by Friday — it hasn't been sent yet.",
+          linkedinRecap: "Recently promoted to Head of Procurement. Posted this week about supply chain automation — likely a live interest area worth referencing.",
+          emailStatus: "pending_followup"
+        },
+        {
+          name: "Anita Verma", email: "anita.verma@ferrosteel.example",
+          linkedinUrl: "https://linkedin.com/in/anitaverma",
+          emailRecap: "No prior email correspondence found with this attendee.",
+          linkedinRecap: "CFO at Ferro Steelworks, 12 years in manufacturing finance. No recent public activity.",
+          emailStatus: "none"
+        }
+      ]
+    },
+    {
+      id: "m2", time: "2:00 PM", endTime: "2:45 PM",
+      title: "Onboarding kickoff — Bafna Silver House",
+      meetingUrl: "https://meet.google.com/xyz-uvwt-rst", status: "later",
+      attendees: [
+        {
+          name: "Priya Bafna", email: "priya@bafnasilver.example",
+          linkedinUrl: "https://linkedin.com/in/priyabafna",
+          emailRecap: "Last email 2 days ago — she confirmed the go-live date and asked whether the WhatsApp catalog sync would include GST-inclusive pricing.",
+          linkedinRecap: "Third-generation owner of the family business. Shared a post last week about expanding into e-commerce.",
+          emailStatus: "recent"
+        }
+      ]
+    },
+    {
+      id: "m3", time: "4:00 PM", endTime: "4:30 PM",
+      title: "Discovery call — Detailing Street",
+      meetingUrl: "https://meet.google.com/def-ghij-klm", status: "later",
+      attendees: [
+        {
+          name: "Rohan Sethi", email: "rohan.sethi@detailingstreet.example",
+          linkedinUrl: "https://linkedin.com/in/rohansethi",
+          emailRecap: "First-time contact, no prior email history. He filled a demo request form yesterday asking specifically about ERP + booking integration.",
+          linkedinRecap: "Founder of a car detailing chain expanding from Raipur to Chandigarh. Recently posted about opening a second location.",
+          emailStatus: "none"
+        },
+        {
+          name: "Megha Iyer", email: "megha.iyer@detailingstreet.example",
+          linkedinUrl: "https://linkedin.com/in/meghaiyer",
+          emailRecap: "Replied to your intro email 4 days ago, said she handles operations and wants a demo focused on staff scheduling.",
+          linkedinRecap: "Operations Manager, previously worked at a logistics startup. No recent public activity.",
+          emailStatus: "recent"
+        }
+      ]
+    },
+    {
+      id: "m4", time: "5:30 PM", endTime: "6:00 PM",
+      title: "Contract review — Hari Om Metallic Pvt. Ltd.",
+      meetingUrl: "https://meet.google.com/nop-qrst-uvw", status: "later",
+      attendees: [
+        {
+          name: "Suresh Agarwal", email: "suresh.agarwal@hariommetallic.example",
+          linkedinUrl: "https://linkedin.com/in/sureshagarwal",
+          emailRecap: "Last emailed 10 days ago about the WhatsApp automation proposal PDF — he asked for a call before signing. You still owe him the revised scope of work.",
+          linkedinRecap: "Managing Director, family-run metal trading business since 1987. No recent public activity.",
+          emailStatus: "pending_followup"
+        }
+      ]
+    }
+  ],
+  tomorrow: [
+    {
+      id: "t1", time: "11:30 AM", endTime: "12:00 PM",
+      title: "Renewal discussion — Global Wear",
+      meetingUrl: "https://meet.google.com/lmn-opqr-stu", status: "upcoming",
+      attendees: [
+        {
+          name: "Karan Malhotra", email: "karan@globalwear.example",
+          linkedinUrl: "https://linkedin.com/in/karanmalhotra",
+          emailRecap: "Last emailed 3 weeks ago about renewal terms — no reply yet. Worth a nudge before the call.",
+          linkedinRecap: "Shared a hiring post last week — team seems to be scaling, could mean bigger budget this cycle.",
+          emailStatus: "pending_followup"
+        }
+      ]
+    },
+    {
+      id: "t2", time: "1:00 PM", endTime: "1:30 PM",
+      title: "Product walkthrough — Vanora.Living",
+      meetingUrl: "https://meet.google.com/xyz-abcd-efg", status: "later",
+      attendees: [
+        {
+          name: "Neha Kapoor", email: "neha.kapoor@vanoraliving.example",
+          linkedinUrl: "https://linkedin.com/in/nehakapoor",
+          emailRecap: "Last email 5 days ago — she loved the Three.js deer scene demo and asked about adding a similar animation to their new product page.",
+          linkedinRecap: "Creative Director at a home decor brand. Recently shared their new showroom launch on LinkedIn.",
+          emailStatus: "recent"
+        }
+      ]
+    },
+    {
+      id: "t3", time: "3:15 PM", endTime: "3:45 PM",
+      title: "Pricing follow-up — Berry Bliss",
+      meetingUrl: "https://meet.google.com/hij-klmn-opq", status: "later",
+      attendees: [
+        {
+          name: "Vikram Nair", email: "vikram.nair@berrybliss.example",
+          linkedinUrl: "https://linkedin.com/in/vikramnair",
+          emailRecap: "No prior email correspondence found with this attendee — meeting was booked directly through the site's contact form.",
+          linkedinRecap: "Co-founder, B2B produce supply. Posted about expanding cold-chain logistics last month.",
+          emailStatus: "none"
+        },
+        {
+          name: "Sanya Bose", email: "sanya.bose@berrybliss.example",
+          linkedinUrl: "https://linkedin.com/in/sanyabose",
+          emailRecap: "Last emailed 8 days ago — confirmed budget range and asked for 3 references from similar B2B clients.",
+          linkedinRecap: "Head of Growth. Active on LinkedIn, frequently posts about supply chain trends.",
+          emailStatus: "pending_followup"
+        }
+      ]
+    }
+  ]
+};
+
+let currentDay = "today";
+let meetings = meetingsByDay[currentDay];
+let selectedId = meetings[0]?.id || null;
+let usingSample = true;
+let webhookUrl = "";
+let autoRefreshTimer = null;
+const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+
+const statusStyles = {
+  pending_followup: { label: "Follow-up owed", cls: "status-pending" },
+  recent: { label: "Recently in touch", cls: "status-recent" },
+  none: { label: "No history", cls: "status-none" }
+};
+
+function initials(name) {
+  return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function renderDate() {
+  const d = new Date();
+  document.getElementById("dateLabel").textContent = d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
+
+function isPriority(m) {
+  return m.attendees.some(a => a.emailStatus === "pending_followup");
+}
+
+function getSortedMeetings() {
+  // priority meetings float to top — stable sort so order within each group stays consistent
+  return [...meetings].sort((a, b) => (isPriority(b) ? 1 : 0) - (isPriority(a) ? 1 : 0));
+}
+
+function renderList() {
+  const list = document.getElementById("meetingList");
+  document.getElementById("meetingCountLabel").textContent = `${meetings.length} meeting${meetings.length !== 1 ? "s" : ""} ${currentDay}`;
+  const sorted = getSortedMeetings();
+  let html = "";
+  sorted.forEach(m => {
+    const priority = isPriority(m);
+    const cls = "meeting-item" + (m.id === selectedId ? " selected" : "") + (priority && m.id !== selectedId ? " priority" : "");
+    html += `
+      <button class="${cls}" data-id="${m.id}">
+        <div class="time-row">${m.time}${m.status === "upcoming" ? '<span class="next-tag">NEXT</span>' : ""}${priority ? ' <span style="color:var(--rust);font-size:11px;">● follow-up owed</span>' : ""}</div>
+        <div class="m-title serif">${m.title}</div>
+        <div class="m-sub">${m.attendees.length} attendee${m.attendees.length !== 1 ? "s" : ""}</div>
+      </button>
+    `;
+  });
+  list.innerHTML = html;
+}
+
+// Single delegated click listener instead of rebinding a handler on every
+// button every render — cheaper and avoids any handler pile-up.
+document.getElementById("meetingList").addEventListener("click", (e) => {
+  const btn = e.target.closest(".meeting-item");
+  if (!btn) return;
+  selectedId = btn.getAttribute("data-id");
+  render();
+});
+
+function switchDay(day) {
+  if (day === currentDay) return; // avoid redundant re-render / flash on repeat clicks
+  currentDay = day;
+  meetings = meetingsByDay[day] || [];
+  const sorted = getSortedMeetings();
+  selectedId = sorted[0]?.id || null;
+  document.getElementById("tabToday").classList.toggle("active", day === "today");
+  document.getElementById("tabTomorrow").classList.toggle("active", day === "tomorrow");
+  render();
+}
+
+function buildBriefingText(meeting) {
+  let text = `${meeting.title}\n${meeting.time} – ${meeting.endTime}\n\n`;
+  meeting.attendees.forEach(a => {
+    text += `${a.name} (${a.email})\n`;
+    text += `Email: ${a.emailRecap}\n`;
+    text += `LinkedIn: ${a.linkedinRecap}\n\n`;
+  });
+  return text.trim();
+}
+
+function copyBriefing(meetingId) {
+  const meeting = meetings.find(m => m.id === meetingId);
+  if (!meeting) return;
+  const text = buildBriefingText(meeting);
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById("copyBtn");
+    if (btn) {
+      btn.classList.add("copied");
+      btn.textContent = "✓ Copied";
+      setTimeout(() => { btn.classList.remove("copied"); btn.textContent = "⧉ Copy briefing"; }, 1800);
+    }
+  });
+}
+
+function renderDetail() {
+  const pane = document.getElementById("detailPane");
+  const meeting = meetings.find(m => m.id === selectedId);
+  if (!meeting) { pane.innerHTML = `<div class="empty">Pick a meeting from the timeline to see the briefing.</div>`; return; }
+
+  let html = `
+    <div class="m-time">${meeting.time} – ${meeting.endTime}</div>
+    <h2 class="serif">${meeting.title}</h2>
+    ${meeting.meetingUrl ? `<a class="join" href="${meeting.meetingUrl}" target="_blank" rel="noreferrer">▶ Join meeting</a>` : ""}
+    <button class="copy-btn" id="copyBtn" onclick="copyBriefing('${meeting.id}')">⧉ Copy briefing</button>
+    <div class="attendee-count">${meeting.attendees.length} attendee${meeting.attendees.length !== 1 ? "s" : ""}</div>
+  `;
+
+  meeting.attendees.forEach((a, i) => {
+    const st = statusStyles[a.emailStatus] || statusStyles.none;
+    html += `
+      <div class="card">
+        <button class="card-head" onclick="toggleCard(${i})">
+          <div class="avatar">${initials(a.name)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="name serif">${a.name}</div>
+            <div class="email">${a.email}</div>
+          </div>
+          <span class="status-pill ${st.cls}">${st.label}</span>
+          <span class="chevron" id="chevron-${i}">▾</span>
+        </button>
+        <div class="card-body" id="card-body-${i}">
+          <div>
+            <div class="label">✉ Last correspondence</div>
+            <p>${a.emailRecap}</p>
+          </div>
+          <div>
+            <div class="label">in LinkedIn signal</div>
+            <p>${a.linkedinRecap}</p>
+            ${a.linkedinUrl ? `<a href="${a.linkedinUrl}" target="_blank" rel="noreferrer">View profile ↗</a>` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  pane.innerHTML = html;
+}
+
+function toggleCard(i) {
+  const body = document.getElementById(`card-body-${i}`);
+  const chev = document.getElementById(`chevron-${i}`);
+  const open = body.classList.toggle("open");
+  chev.textContent = open ? "▴" : "▾";
+}
+
+function render() {
+  renderList();
+  renderDetail();
+  document.getElementById("sampleBanner").classList.toggle("show", usingSample);
+}
+
+async function fetchFromWebhook(url, silent) {
+  if (!url) return;
+  const errBanner = document.getElementById("errorBanner");
+  if (!silent) errBanner.classList.remove("show");
+  try {
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) throw new Error(`Server responded ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("Expected a list of meetings back");
+    meetingsByDay[currentDay] = data;
+    meetings = data;
+    usingSample = false;
+    selectedId = data[0]?.id || null;
+    document.getElementById("syncedLabel").textContent = "Synced " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    render();
+    startAutoRefresh(url);
+  } catch (e) {
+    if (!silent) {
+      errBanner.textContent = "⚠ " + (e.message || "Couldn't reach that webhook");
+      errBanner.classList.add("show");
+    }
+  }
+}
+
+function startAutoRefresh(url) {
+  webhookUrl = url;
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(() => fetchFromWebhook(webhookUrl, true), AUTO_REFRESH_MS);
+}
+
+document.getElementById("settingsToggle").onclick = () => {
+  document.getElementById("settingsBar").classList.toggle("open");
+  document.getElementById("settingsToggle").classList.toggle("active");
+};
+document.getElementById("webhookInput").oninput = (e) => {
+  document.getElementById("refreshBtn").disabled = !e.target.value;
+};
+document.getElementById("refreshBtn").onclick = () => fetchFromWebhook(document.getElementById("webhookInput").value);
+document.getElementById("connectBtn").onclick = () => fetchFromWebhook(document.getElementById("webhookInput").value);
+
+renderDate();
+render();
+</script>
+</body>
+</html>
